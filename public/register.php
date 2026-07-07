@@ -12,51 +12,55 @@ if (isset($_SESSION['user_id'])) {
 include '../templates/header.php';
 ?>
 
-<div class="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8 bg-white dark:bg-darkCard p-8 rounded-xl shadow-lg border border-gray-100 dark:border-gray-800">
+<div class="relative flex items-center justify-center pt-8 pb-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8 glass-card p-10 rounded-2xl relative z-10">
         <div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-                Create your account
+            <h2 class="mt-2 text-center text-4xl font-extrabold text-gray-900 dark:text-white font-outfit tracking-tight">
+                Developer Workspace
             </h2>
+            <p class="mt-3 text-center text-sm text-gray-500 dark:text-gray-400 font-medium">
+                Create an account to manage your development tasks.
+            </p>
         </div>
         
-        <div id="errorContainer" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <span id="errorMessage" class="block sm:inline"></span>
+        <div id="errorContainer" class="hidden bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg relative backdrop-blur-sm" role="alert">
+            <span id="errorMessage" class="block sm:inline text-sm font-medium"></span>
         </div>
         
-        <div id="successContainer" class="hidden bg-green-600 border border-green-700 text-white px-4 py-3 rounded relative" role="alert">
-            <span id="successMessage" class="block sm:inline"></span>
+        <div id="successContainer" class="hidden bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 px-4 py-3 rounded-lg relative backdrop-blur-sm" role="alert">
+            <span id="successMessage" class="block sm:inline text-sm font-medium"></span>
         </div>
 
         <form id="registerForm" class="mt-8 space-y-6">
-            <div class="rounded-md shadow-sm space-y-4">
+            <div class="space-y-5">
                 <div>
-                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
-                    <input id="username" name="username" type="text" required class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm mt-1" placeholder="developer123">
+                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300 ml-1">Username</label>
+                    <input id="username" name="username" type="text" required autofocus class="appearance-none rounded-xl relative block w-full px-4 py-3 bg-white dark:bg-gray-900/50 border border-gray-300 dark:border-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm backdrop-blur-sm mt-1 shadow-sm" placeholder="developer123">
                 </div>
                 <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                    <input id="password" name="password" type="password" required class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm mt-1" placeholder="••••••••">
+                    <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 ml-1">Password</label>
+                    <input id="password" name="password" type="password" required class="appearance-none rounded-xl relative block w-full px-4 py-3 bg-white dark:bg-gray-900/50 border border-gray-300 dark:border-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm backdrop-blur-sm mt-1 shadow-sm" placeholder="••••••••">
                 </div>
                 <div>
-                    <label for="password_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm Password</label>
-                    <input id="password_confirm" name="password_confirm" type="password" required class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm mt-1" placeholder="••••••••">
+                    <label for="password_confirm" class="block text-sm font-medium text-gray-700 dark:text-gray-300 ml-1">Confirm Password</label>
+                    <input id="password_confirm" name="password_confirm" type="password" required class="appearance-none rounded-xl relative block w-full px-4 py-3 bg-white dark:bg-gray-900/50 border border-gray-300 dark:border-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all sm:text-sm backdrop-blur-sm mt-1 shadow-sm" placeholder="••••••••">
                 </div>
             </div>
 
-            <div>
-                <button type="submit" id="registerBtn" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
-                    <span id="btnText">Sign up</span>
-                    <span id="btnSpinner" class="hidden absolute right-4">
+            <div class="pt-2">
+                <button type="submit" id="registerBtn" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all shadow-lg hover:shadow-indigo-500/30 overflow-hidden">
+                    <span id="btnText" class="relative z-10">Sign up</span>
+                    <span id="btnSpinner" class="hidden absolute right-4 z-10">
                         <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     </span>
+                    <div class="absolute inset-0 h-full w-full bg-white/20 scale-x-0 group-hover:scale-x-100 transition-transform origin-left rounded-xl"></div>
                 </button>
             </div>
         </form>
         
-        <div class="text-center mt-4">
+        <div class="text-center mt-6">
             <p class="text-sm text-gray-600 dark:text-gray-400">
-                Already have an account? <a href="login" class="font-medium text-primary hover:text-blue-500">Log in</a>
+                Already have an account? <a href="login" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors">Log in</a>
             </p>
         </div>
     </div>
