@@ -1,0 +1,11 @@
+# Ignore environment and config files
+config/config.php
+
+# Ignore IDE folders
+.vscode/
+.idea/
+.gemini/
+
+# OS generated files
+.DS_Store
+Thumbs.db
