@@ -1,6 +1,10 @@
 # Ignore environment and config files
 .env
 
+# Ignore logs
+logs/
+app-error.log
+
 # Ignore IDE folders
 .vscode/
 .idea/

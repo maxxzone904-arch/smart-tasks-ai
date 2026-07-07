@@ -1,45 +1,12 @@
 <?php
+declare(strict_types=1);
+
 require_once '../config/database.php';
 session_start();
 
 if (isset($_SESSION['user_id'])) {
     header("Location: index");
     exit();
-}
-
-$error = '';
-$success = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username']);
-    $password = $_POST['password'];
-    $password_confirm = $_POST['password_confirm'];
-
-    if (empty($username) || empty($password)) {
-        $error = "Please fill in all fields.";
-    } elseif ($password !== $password_confirm) {
-        $error = "Passwords do not match.";
-    } else {
-        $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $stmt->store_result();
-
-        if ($stmt->num_rows > 0) {
-            $error = "Username already exists.";
-        } else {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
-            $stmt->bind_param("ss", $username, $hashed_password);
-            
-            if ($stmt->execute()) {
-                $success = "Registration successful! You can now <a href='login' class='underline text-blue-200'>log in</a>.";
-            } else {
-                $error = "Something went wrong. Please try again later.";
-            }
-        }
-        $stmt->close();
-    }
 }
 
 include '../templates/header.php';
@@ -53,19 +20,15 @@ include '../templates/header.php';
             </h2>
         </div>
         
-        <?php if ($error): ?>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <span class="block sm:inline"><?= htmlspecialchars($error) ?></span>
-            </div>
-        <?php endif; ?>
+        <div id="errorContainer" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span id="errorMessage" class="block sm:inline"></span>
+        </div>
         
-        <?php if ($success): ?>
-            <div class="bg-green-600 border border-green-700 text-white px-4 py-3 rounded relative" role="alert">
-                <span class="block sm:inline"><?= $success ?></span>
-            </div>
-        <?php else: ?>
+        <div id="successContainer" class="hidden bg-green-600 border border-green-700 text-white px-4 py-3 rounded relative" role="alert">
+            <span id="successMessage" class="block sm:inline"></span>
+        </div>
 
-        <form class="mt-8 space-y-6" action="register" method="POST">
+        <form id="registerForm" class="mt-8 space-y-6">
             <div class="rounded-md shadow-sm space-y-4">
                 <div>
                     <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
@@ -82,12 +45,14 @@ include '../templates/header.php';
             </div>
 
             <div>
-                <button type="submit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
-                    Sign up
+                <button type="submit" id="registerBtn" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
+                    <span id="btnText">Sign up</span>
+                    <span id="btnSpinner" class="hidden absolute right-4">
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </span>
                 </button>
             </div>
         </form>
-        <?php endif; ?>
         
         <div class="text-center mt-4">
             <p class="text-sm text-gray-600 dark:text-gray-400">
@@ -96,5 +61,7 @@ include '../templates/header.php';
         </div>
     </div>
 </div>
+
+<script src="js/register.js"></script>
 
 <?php include '../templates/footer.php'; ?>
