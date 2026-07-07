@@ -19,7 +19,7 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-// Handle task status update
+// Handle task status update (via GET from old links, keeping for backward compatibility)
 if (isset($_GET['status']) && isset($_GET['id'])) {
     $task_id = (int)$_GET['id'];
     $new_status = $_GET['status'];
@@ -27,6 +27,26 @@ if (isset($_GET['status']) && isset($_GET['id'])) {
     if (in_array($new_status, $valid_statuses)) {
         $stmt = $conn->prepare("UPDATE tasks SET status = ? WHERE id = ? AND user_id = ?");
         $stmt->bind_param("sii", $new_status, $task_id, $user_id);
+        $stmt->execute();
+    }
+    header("Location: index");
+    exit();
+}
+
+// Handle full task update (via POST from inline editing)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task_id'])) {
+    $task_id = (int)$_POST['update_task_id'];
+    $title = $_POST['title'];
+    $description = $_POST['description'];
+    $priority = $_POST['priority'];
+    $status = $_POST['status'];
+    
+    $valid_priorities = ['High', 'Medium', 'Low'];
+    $valid_statuses = ['Pending', 'In Progress', 'Completed'];
+    
+    if (in_array($priority, $valid_priorities) && in_array($status, $valid_statuses)) {
+        $stmt = $conn->prepare("UPDATE tasks SET title = ?, description = ?, priority = ?, status = ? WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("ssssii", $title, $description, $priority, $status, $task_id, $user_id);
         $stmt->execute();
     }
     header("Location: index");
@@ -76,40 +96,40 @@ include '../templates/header.php';
                 <ul class="space-y-4">
                     <?php foreach($tasks as $task): ?>
                         <li class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between">
-                                <div class="flex-1">
+                            <form action="index" method="POST" class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-4 sm:space-y-0">
+                                <input type="hidden" name="update_task_id" value="<?= $task['id'] ?>">
+                                <div class="flex-1 space-y-2 pr-4">
                                     <div class="flex items-center space-x-2">
-                                        <h4 class="text-base font-medium text-gray-900 dark:text-white <?php if($task['status'] === 'Completed') echo 'line-through text-gray-400 dark:text-gray-500'; ?>"><?= htmlspecialchars($task['title']) ?></h4>
-                                        <?php if($task['priority'] === 'High'): ?>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">High</span>
-                                        <?php elseif($task['priority'] === 'Medium'): ?>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Medium</span>
-                                        <?php else: ?>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Low</span>
-                                        <?php endif; ?>
+                                        <input type="text" name="title" value="<?= htmlspecialchars($task['title']) ?>" class="font-medium text-gray-900 dark:text-white bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:ring-0 px-1 py-0.5 w-full <?php if($task['status'] === 'Completed') echo 'line-through text-gray-400 dark:text-gray-500'; ?>" required>
+                                        
+                                        <select name="priority" onchange="this.form.submit()" class="text-xs font-medium rounded-full px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-none focus:ring-primary cursor-pointer <?php 
+                                            if($task['priority'] === 'High') echo 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+                                            elseif($task['priority'] === 'Medium') echo 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+                                            else echo 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+                                        ?>">
+                                            <option value="High" <?= $task['priority'] === 'High' ? 'selected' : '' ?> class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">High</option>
+                                            <option value="Medium" <?= $task['priority'] === 'Medium' ? 'selected' : '' ?> class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">Medium</option>
+                                            <option value="Low" <?= $task['priority'] === 'Low' ? 'selected' : '' ?> class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">Low</option>
+                                        </select>
                                     </div>
-                                    <?php if(!empty($task['description'])): ?>
-                                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400 <?php if($task['status'] === 'Completed') echo 'opacity-50'; ?>"><?= nl2br(htmlspecialchars($task['description'])) ?></p>
-                                    <?php endif; ?>
+                                    <textarea name="description" rows="2" class="w-full text-sm text-gray-600 dark:text-gray-400 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:ring-0 px-1 <?php if($task['status'] === 'Completed') echo 'opacity-50'; ?>" placeholder="Description (optional)"><?= htmlspecialchars($task['description'] ?? '') ?></textarea>
                                     <div class="mt-2 text-xs text-gray-500 dark:text-gray-500">
                                         Created: <?= date('M j, Y g:i A', strtotime($task['created_at'])) ?>
                                     </div>
                                 </div>
-                                <div class="mt-4 sm:mt-0 sm:ml-4 flex-shrink-0 flex flex-col items-start sm:items-end space-y-2">
-                                    <span class="inline-flex items-center text-sm">
-                                        Status: <strong class="ml-1 text-gray-900 dark:text-white"><?= htmlspecialchars($task['status']) ?></strong>
-                                    </span>
+                                <div class="flex-shrink-0 flex flex-col items-start sm:items-end space-y-3">
+                                    <select name="status" onchange="this.form.submit()" class="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-md focus:ring-primary focus:border-primary block py-1 pl-2 pr-6 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-colors cursor-pointer">
+                                        <option value="Pending" <?= $task['status'] === 'Pending' ? 'selected' : '' ?>>Pending</option>
+                                        <option value="In Progress" <?= $task['status'] === 'In Progress' ? 'selected' : '' ?>>In Progress</option>
+                                        <option value="Completed" <?= $task['status'] === 'Completed' ? 'selected' : '' ?>>Completed</option>
+                                    </select>
                                     <div class="flex space-x-2 text-xs">
-                                        <?php if($task['status'] !== 'Completed'): ?>
-                                            <a href="?status=Completed&id=<?= $task['id'] ?>" class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 font-medium">Complete</a>
-                                        <?php else: ?>
-                                            <a href="?status=Pending&id=<?= $task['id'] ?>" class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300 font-medium">Reopen</a>
-                                        <?php endif; ?>
+                                        <button type="submit" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 font-medium">Save</button>
                                         <span class="text-gray-300 dark:text-gray-600">|</span>
                                         <a href="?delete=<?= $task['id'] ?>" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 font-medium" onclick="return confirm('Delete this task?');">Delete</a>
                                     </div>
                                 </div>
-                            </div>
+                            </form>
                         </li>
                     <?php endforeach; ?>
                 </ul>
