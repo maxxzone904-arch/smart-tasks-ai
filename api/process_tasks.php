@@ -26,12 +26,17 @@ if (empty($brain_dump)) {
     exit();
 }
 
-$config = require '../config/config.php';
-$apiKey = $config['gemini_api_key'] ?? '';
+$envPath = __DIR__ . '/../.env';
+if (file_exists($envPath)) {
+    $env = parse_ini_file($envPath);
+    $apiKey = $env['GEMINI_API_KEY'] ?? '';
+} else {
+    $apiKey = '';
+}
 
-if (empty($apiKey) || $apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+if (empty($apiKey) || $apiKey === 'YOUR_API_KEY_HERE') {
     http_response_code(500);
-    echo json_encode(['error' => 'API Key is missing in config/config.php']);
+    echo json_encode(['error' => 'API Key is missing in .env file']);
     exit();
 }
 

@@ -2,12 +2,21 @@
 // scripts/migrate.php
 // Note: This script should be run from CLI, not accessible via web server in production.
 
-$db_host = '127.0.0.1';
-$db_user = 'root'; // XAMPP default
-$db_pass = ''; // XAMPP default
-$db_name = 'smart_tasks_db';
-
 echo "Starting Database Migration...\n";
+
+$envPath = __DIR__ . '/../.env';
+if (file_exists($envPath)) {
+    $env = parse_ini_file($envPath);
+    $db_host = $env['DB_HOST'] ?? '127.0.0.1';
+    $db_user = $env['DB_USER'] ?? 'root';
+    $db_pass = $env['DB_PASS'] ?? '';
+    $db_name = $env['DB_NAME'] ?? 'smart_tasks_db';
+} else {
+    $db_host = '127.0.0.1';
+    $db_user = 'root';
+    $db_pass = '';
+    $db_name = 'smart_tasks_db';
+}
 
 // 1. Connect without database to create it
 $conn = new mysqli($db_host, $db_user, $db_pass);
