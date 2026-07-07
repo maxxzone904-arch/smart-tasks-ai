@@ -7,36 +7,6 @@ if (isset($_SESSION['user_id'])) {
     exit();
 }
 
-$error = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username']);
-    $password = $_POST['password'];
-
-    if (empty($username) || empty($password)) {
-        $error = "Please fill in all fields.";
-    } else {
-        $stmt = $conn->prepare("SELECT id, username, password_hash FROM users WHERE username = ?");
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if ($row = $result->fetch_assoc()) {
-            if (password_verify($password, $row['password_hash'])) {
-                $_SESSION['user_id'] = $row['id'];
-                $_SESSION['username'] = $row['username'];
-                header("Location: index");
-                exit();
-            } else {
-                $error = "Invalid username or password.";
-            }
-        } else {
-            $error = "Invalid username or password.";
-        }
-        $stmt->close();
-    }
-}
-
 include '../templates/header.php';
 ?>
 
@@ -48,13 +18,11 @@ include '../templates/header.php';
             </h2>
         </div>
         
-        <?php if ($error): ?>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <span class="block sm:inline"><?= htmlspecialchars($error) ?></span>
-            </div>
-        <?php endif; ?>
+        <div id="errorContainer" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span id="errorMessage" class="block sm:inline"></span>
+        </div>
         
-        <form class="mt-8 space-y-6" action="login" method="POST">
+        <form id="loginForm" class="mt-8 space-y-6">
             <div class="rounded-md shadow-sm space-y-4">
                 <div>
                     <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
@@ -67,8 +35,11 @@ include '../templates/header.php';
             </div>
 
             <div>
-                <button type="submit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
-                    Log in
+                <button type="submit" id="loginBtn" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors">
+                    <span id="btnText">Log in</span>
+                    <span id="btnSpinner" class="hidden absolute right-4">
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </span>
                 </button>
             </div>
         </form>
@@ -80,5 +51,56 @@ include '../templates/header.php';
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); // Stop standard form submission
+    
+    const btn = document.getElementById('loginBtn');
+    const btnText = document.getElementById('btnText');
+    const btnSpinner = document.getElementById('btnSpinner');
+    const errorContainer = document.getElementById('errorContainer');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    // Set UI to loading state
+    btn.disabled = true;
+    btnText.innerText = 'Logging in...';
+    btnSpinner.classList.remove('hidden');
+    errorContainer.classList.add('hidden');
+    
+    try {
+        const response = await fetch('../api/login.php', {
+            method: 'POST',
+            body: new FormData(e.target)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Server returned an error.');
+        }
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            window.location.href = 'index'; // Redirect smoothly
+        } else {
+            // Show dynamic error without reloading page
+            errorMessage.innerText = result.message;
+            errorContainer.classList.remove('hidden');
+            
+            // Reset button state
+            btn.disabled = false;
+            btnText.innerText = 'Log in';
+            btnSpinner.classList.add('hidden');
+        }
+    } catch (error) {
+        errorMessage.innerText = 'An unexpected network error occurred. Please try again.';
+        errorContainer.classList.remove('hidden');
+        
+        btn.disabled = false;
+        btnText.innerText = 'Log in';
+        btnSpinner.classList.add('hidden');
+    }
+});
+</script>
 
 <?php include '../templates/footer.php'; ?>
