@@ -10,6 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart AI Tasks</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -26,6 +27,20 @@ if (session_status() === PHP_SESSION_NONE) {
     </script>
     <style>
         body { font-family: 'Inter', sans-serif; }
+        /* Quill Editor UI Adjustments */
+        .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid #f3f4f6 !important; padding: 4px !important; }
+        .dark .ql-toolbar.ql-snow { border-bottom-color: #374151 !important; }
+        .ql-container.ql-snow { border: none !important; font-family: 'Inter', sans-serif !important; font-size: 0.875rem !important; }
+        .dark .ql-snow .ql-stroke { stroke: #9ca3af; }
+        .dark .ql-snow .ql-fill, .dark .ql-snow .ql-stroke.ql-fill { fill: #9ca3af; }
+        .dark .ql-snow .ql-picker { color: #9ca3af; }
+        .dark .ql-editor { color: #d1d5db; }
+        .dark .ql-editor.ql-blank::before { color: #6b7280; }
+        .ql-editor { padding: 8px 4px !important; min-height: 60px; }
+        .quill-wrapper { border-radius: 0.375rem; border: 1px solid transparent; transition: all 0.2s; }
+        .quill-wrapper:hover { border-color: #e5e7eb; }
+        .dark .quill-wrapper:hover { border-color: #374151; }
+        .quill-wrapper:focus-within { border-color: #3b82f6 !important; box-shadow: 0 0 0 1px #3b82f6; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-darkBg dark:text-white transition-colors duration-200 min-h-screen flex flex-col">

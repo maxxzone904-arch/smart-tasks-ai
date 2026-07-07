@@ -4,6 +4,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">&copy; <?= date('Y') ?> SmartTasks AI. All rights reserved.</p>
         </div>
     </footer>
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script>
         // Dark mode toggle logic
         var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');

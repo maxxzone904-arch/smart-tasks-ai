@@ -1,5 +1,8 @@
 let globalTasks = [];
+const quillEditors = {};
 let currentStatusFilter = null;
+let currentPage = 1;
+const TASKS_PER_PAGE = 10;
 
 document.getElementById('ai-form').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -48,8 +51,16 @@ document.getElementById('ai-form').addEventListener('submit', async function(e) 
             
             document.getElementById('brain_dump').value = ''; // clear textarea
             
-            // Refresh tasks asynchronously
+            // Refresh tasks asynchronously and scroll down
             loadTasks();
+            setTimeout(() => {
+                const container = document.getElementById('task-container');
+                if (container) {
+                    const y = container.getBoundingClientRect().top + window.scrollY - 100;
+                    window.scrollTo({top: y, behavior: 'smooth'});
+                }
+            }, 300);
+            
         } else {
             msgDiv.classList.add('text-red-500');
             msgDiv.innerText = result.error || 'Something went wrong';
@@ -150,8 +161,16 @@ function renderTasks() {
         return;
     }
     
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredTasks.length / TASKS_PER_PAGE);
+    if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    
+    const startIndex = (currentPage - 1) * TASKS_PER_PAGE;
+    const paginatedTasks = filteredTasks.slice(startIndex, startIndex + TASKS_PER_PAGE);
+    
     let html = '<ul class="space-y-4">';
-    filteredTasks.forEach(task => {
+    paginatedTasks.forEach(task => {
         const isCompleted = task.status === 'Completed';
         const titleStyle = isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : '';
         const descStyle = isCompleted ? 'opacity-50' : '';
@@ -179,7 +198,9 @@ function renderTasks() {
                             <option value="Low" ${task.priority === 'Low' ? 'selected' : ''} class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">Low</option>
                         </select>
                     </div>
-                    <textarea id="description-${task.id}" rows="2" class="w-full text-sm text-gray-600 dark:text-gray-400 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:ring-0 px-1 ${descStyle}" placeholder="Description (optional)">${escapeHTML(task.description)}</textarea>
+                    <div class="quill-wrapper bg-transparent mt-2 ${descStyle}">
+                        <div id="description-${task.id}"></div>
+                    </div>
                     <div class="mt-2 text-xs text-gray-500 dark:text-gray-500">
                         Created: ${dateStr}
                     </div>
@@ -202,7 +223,64 @@ function renderTasks() {
         `;
     });
     html += '</ul>';
+    
+    // Pagination UI
+    if (totalPages > 1) {
+        html += `
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4 sm:space-y-0">
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+                Showing <span class="font-medium">${startIndex + 1}</span> to <span class="font-medium">${Math.min(startIndex + TASKS_PER_PAGE, filteredTasks.length)}</span> of <span class="font-medium">${filteredTasks.length}</span> tasks
+            </div>
+            <div class="flex space-x-1">
+                <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Prev</button>
+        `;
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (totalPages > 7) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    html += `<button onclick="changePage(${i})" class="px-3 py-1 text-sm rounded-md border ${i === currentPage ? 'bg-primary text-white border-primary' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'} transition-colors">${i}</button>`;
+                } else if (i === currentPage - 2 || i === currentPage + 2) {
+                    html += `<span class="px-2 py-1 text-gray-400">...</span>`;
+                }
+            } else {
+                html += `<button onclick="changePage(${i})" class="px-3 py-1 text-sm rounded-md border ${i === currentPage ? 'bg-primary text-white border-primary' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'} transition-colors">${i}</button>`;
+            }
+        }
+        
+        html += `
+                <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Next</button>
+            </div>
+        </div>
+        `;
+    }
+    
     container.innerHTML = html;
+    
+    // Initialize Quill Editors for each task on the current page
+    paginatedTasks.forEach(task => {
+        const quill = new Quill(`#description-${task.id}`, {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'Description (optional)...'
+        });
+        
+        // Load content safely
+        const desc = task.description || '';
+        // If it looks like HTML, load as HTML, otherwise set as plain text
+        if (/<[a-z][\s\S]*>/i.test(desc)) {
+            quill.clipboard.dangerouslyPasteHTML(desc);
+        } else {
+            quill.setText(desc);
+        }
+        
+        quillEditors[task.id] = quill;
+    });
     
     updateStats();
 }
@@ -263,13 +341,26 @@ function toggleStatusFilter(status) {
     } else {
         currentStatusFilter = status;
     }
+    currentPage = 1;
     renderTasks();
+}
+
+function changePage(page) {
+    currentPage = page;
+    renderTasks();
+    const container = document.getElementById('task-container');
+    const y = container.getBoundingClientRect().top + window.scrollY - 100;
+    window.scrollTo({top: y, behavior: 'smooth'});
 }
 
 // Async Task Management
 async function updateTask(id) {
     const title = document.getElementById(`title-${id}`).value;
-    const description = document.getElementById(`description-${id}`).value;
+    
+    const quill = quillEditors[id];
+    let description = quill ? quill.root.innerHTML : '';
+    if (description === '<p><br></p>') description = '';
+    
     const priority = document.getElementById(`priority-${id}`).value;
     const status = document.getElementById(`status-${id}`).value;
     const indicator = document.getElementById(`save-indicator-${id}`);
@@ -303,13 +394,13 @@ async function updateTask(id) {
                 
                 // Dynamically apply styles based on new status instead of reloading
                 const titleEl = document.getElementById(`title-${id}`);
-                const descEl = document.getElementById(`description-${id}`);
+                const descWrapperEl = document.getElementById(`description-${id}`).parentElement;
                 if (status === 'Completed') {
                     titleEl.classList.add('line-through', 'text-gray-400', 'dark:text-gray-500');
-                    descEl.classList.add('opacity-50');
+                    descWrapperEl.classList.add('opacity-50');
                 } else {
                     titleEl.classList.remove('line-through', 'text-gray-400', 'dark:text-gray-500');
-                    descEl.classList.remove('opacity-50');
+                    descWrapperEl.classList.remove('opacity-50');
                 }
                 
                 // Update priority colors dynamically
@@ -367,6 +458,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
     
-    if (searchInput) searchInput.addEventListener('input', renderTasks);
-    if (sortSelect) sortSelect.addEventListener('change', renderTasks);
+    if (searchInput) searchInput.addEventListener('input', () => { currentPage = 1; renderTasks(); });
+    if (sortSelect) sortSelect.addEventListener('change', () => { currentPage = 1; renderTasks(); });
 });
