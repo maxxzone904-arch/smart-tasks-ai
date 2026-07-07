@@ -9,7 +9,7 @@ class GeminiService implements AIServiceInterface {
     }
 
     public function extractTasks(string $text): array {
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . $this->apiKey;
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' . $this->apiKey;
         
         $prompt = "You are an assistant for a software developer. Extract actionable tasks from the following text. \n" .
                   "Return the result STRICTLY as a valid JSON array. Each object in the array must have exactly these keys:\n" .
