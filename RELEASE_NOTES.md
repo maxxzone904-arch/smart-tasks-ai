@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.3.0 - Living Glass UI & Rich Text
+* **Premium Design**: Completely overhauled the frontend to use a "Living Glass" aesthetic, featuring frosted glass cards, dynamic background orbs, and gradients across the Auth and Dashboard pages.
+* **Rich Text Editing**: Integrated Quill.js for the task description field, allowing users to write and save complex HTML-formatted task instructions.
+* **UI Enhancements**: 
+  - Added a Tailwind confirmation modal for the logout action to prevent accidental logouts.
+  - Upgraded the navbar with a sleek, automatically generated user profile avatar chip.
+* **Database Optimization**: Dropped the unused `is_ai_generated` column from the `tasks` schema to keep the database lean and performant.
+
 ## v1.2.0 - Security & Login Refactor
 * **UI/UX Enhancement**: Refactored the login page to use the modern asynchronous `fetch` API, providing a seamless experience with loading states and no page reloads.
 * **Premium Design**: Added a high-end, Context7-inspired HTML 500 error screen that displays if the database goes offline.
