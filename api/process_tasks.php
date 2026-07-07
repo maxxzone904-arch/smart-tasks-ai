@@ -60,6 +60,7 @@ if (empty($extractedTasks)) {
 // 3. Save to Database
 $user_id = $_SESSION['user_id'];
 $insertedCount = 0;
+$newly_added_tasks = [];
 
 $stmt = $conn->prepare("INSERT INTO tasks (user_id, title, description, priority, status) VALUES (?, ?, ?, ?, 'Pending')");
 
@@ -75,6 +76,10 @@ foreach ($extractedTasks as $task) {
     $stmt->bind_param("isss", $user_id, $title, $description, $priority);
     if ($stmt->execute()) {
         $insertedCount++;
+        $newly_added_tasks[] = [
+            'title' => $title,
+            'priority' => $priority
+        ];
     }
 }
 $stmt->close();
@@ -82,5 +87,6 @@ $stmt->close();
 echo json_encode([
     'success' => true,
     'message' => "Successfully extracted and added $insertedCount tasks.",
-    'tasks_added' => $insertedCount
+    'tasks_added' => $insertedCount,
+    'created_tasks' => $newly_added_tasks
 ]);

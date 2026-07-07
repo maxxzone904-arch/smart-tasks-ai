@@ -1,3 +1,6 @@
+let globalTasks = [];
+let currentStatusFilter = null;
+
 document.getElementById('ai-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -32,8 +35,17 @@ document.getElementById('ai-form').addEventListener('submit', async function(e) 
         msgDiv.classList.remove('hidden', 'text-red-500', 'text-green-500');
         
         if (response.ok) {
-            msgDiv.classList.add('text-green-500');
-            msgDiv.innerText = result.message;
+            let successHTML = `<div class="font-medium text-green-600 dark:text-green-400">${result.message}</div>`;
+            if (result.created_tasks && result.created_tasks.length > 0) {
+                successHTML += `<ul class="list-disc pl-5 mt-2 space-y-1 text-gray-700 dark:text-gray-300 text-left">`;
+                result.created_tasks.forEach(t => {
+                    successHTML += `<li><strong>${escapeHTML(t.title)}</strong> <span class="text-xs opacity-75">(${escapeHTML(t.priority)})</span></li>`;
+                });
+                successHTML += `</ul>`;
+            }
+            msgDiv.innerHTML = successHTML;
+            msgDiv.classList.remove('hidden');
+            
             document.getElementById('brain_dump').value = ''; // clear textarea
             
             // Refresh tasks asynchronously
@@ -78,77 +90,180 @@ async function loadTasks() {
         const data = await response.json();
         
         if (data.status === 'success') {
-            if (data.tasks.length === 0) {
-                container.innerHTML = `
-                <div class="text-center py-12">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No tasks</h3>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by dumping your notes into the AI tool.</p>
-                </div>`;
-                return;
-            }
-            
-            let html = '<ul class="space-y-4">';
-            data.tasks.forEach(task => {
-                const isCompleted = task.status === 'Completed';
-                const titleStyle = isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : '';
-                const descStyle = isCompleted ? 'opacity-50' : '';
-                
-                let prioClass = '';
-                if (task.priority === 'High') prioClass = 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-                else if (task.priority === 'Medium') prioClass = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-                else prioClass = 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-                
-                // Format date as "M j, Y g:i A" matching PHP date('M j, Y g:i A')
-                const dateObj = new Date(task.created_at);
-                const dateOptions = { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
-                const dateStr = dateObj.toLocaleString('en-US', dateOptions).replace(',', ''); 
-
-                html += `
-                <li id="task-${task.id}" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-4 sm:space-y-0">
-                        <div class="flex-1 space-y-2 pr-4">
-                            <div class="flex items-center space-x-2">
-                                <input type="text" id="title-${task.id}" value="${escapeHTML(task.title)}" class="font-medium text-gray-900 dark:text-white bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:ring-0 px-1 py-0.5 w-full ${titleStyle}" required>
-                                
-                                <select id="priority-${task.id}" onchange="updateTask(${task.id})" class="text-xs font-medium rounded-full px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-none focus:ring-primary cursor-pointer ${prioClass}">
-                                    <option value="High" ${task.priority === 'High' ? 'selected' : ''} class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">High</option>
-                                    <option value="Medium" ${task.priority === 'Medium' ? 'selected' : ''} class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">Medium</option>
-                                    <option value="Low" ${task.priority === 'Low' ? 'selected' : ''} class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">Low</option>
-                                </select>
-                            </div>
-                            <textarea id="description-${task.id}" rows="2" class="w-full text-sm text-gray-600 dark:text-gray-400 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:ring-0 px-1 ${descStyle}" placeholder="Description (optional)">${escapeHTML(task.description)}</textarea>
-                            <div class="mt-2 text-xs text-gray-500 dark:text-gray-500">
-                                Created: ${dateStr}
-                            </div>
-                        </div>
-                        <div class="flex-shrink-0 flex flex-col items-start sm:items-end space-y-3">
-                            <select id="status-${task.id}" onchange="updateTask(${task.id})" class="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-md focus:ring-primary focus:border-primary block py-1 pl-2 pr-6 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-colors cursor-pointer">
-                                <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                                <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                                <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
-                            </select>
-                            <div class="flex items-center space-x-2 text-xs">
-                                <span id="save-indicator-${task.id}" class="text-green-500 opacity-0 transition-opacity duration-300 font-medium mr-2">Saved</span>
-                                <button type="button" onclick="updateTask(${task.id})" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 font-medium">Save</button>
-                                <span class="text-gray-300 dark:text-gray-600">|</span>
-                                <button type="button" onclick="deleteTask(${task.id})" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 font-medium">Delete</button>
-                            </div>
-                        </div>
-                    </div>
-                </li>
-                `;
-            });
-            html += '</ul>';
-            container.innerHTML = html;
+            globalTasks = data.tasks;
+            renderTasks();
         } else {
             container.innerHTML = `<div class="text-center text-red-500 py-12">${data.message || 'Failed to load tasks'}</div>`;
         }
     } catch (e) {
         container.innerHTML = `<div class="text-center text-red-500 py-12">Network error occurred while fetching tasks.</div>`;
     }
+}
+
+function renderTasks() {
+    const container = document.getElementById('task-container');
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    
+    let filteredTasks = [...globalTasks];
+    
+    // Search filter
+    if (searchInput && searchInput.value.trim() !== '') {
+        const term = searchInput.value.trim().toLowerCase();
+        filteredTasks = filteredTasks.filter(t => 
+            (t.title && t.title.toLowerCase().includes(term)) || 
+            (t.description && t.description.toLowerCase().includes(term))
+        );
+    }
+    
+    // Status Filter (from stat cards)
+    if (currentStatusFilter) {
+        filteredTasks = filteredTasks.filter(t => t.status === currentStatusFilter);
+    }
+    
+    // Sort filter
+    if (sortSelect) {
+        const sortVal = sortSelect.value;
+        if (sortVal === 'newest') {
+            filteredTasks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        } else if (sortVal === 'oldest') {
+            filteredTasks.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        } else if (sortVal === 'priority_desc' || sortVal === 'priority_asc') {
+            const pMap = { 'High': 3, 'Medium': 2, 'Low': 1 };
+            filteredTasks.sort((a, b) => {
+                const diff = (pMap[b.priority] || 0) - (pMap[a.priority] || 0);
+                return sortVal === 'priority_desc' ? diff : -diff;
+            });
+        }
+        // 'default' uses the original smart priority order from the DB
+    }
+
+    if (filteredTasks.length === 0) {
+        container.innerHTML = `
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No tasks found</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Try adjusting your search or add a new task.</p>
+        </div>`;
+        return;
+    }
+    
+    let html = '<ul class="space-y-4">';
+    filteredTasks.forEach(task => {
+        const isCompleted = task.status === 'Completed';
+        const titleStyle = isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : '';
+        const descStyle = isCompleted ? 'opacity-50' : '';
+        
+        let prioClass = '';
+        if (task.priority === 'High') prioClass = 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+        else if (task.priority === 'Medium') prioClass = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        else prioClass = 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+        
+        // Format date as "M j, Y g:i A" matching PHP date('M j, Y g:i A')
+        const dateObj = new Date(task.created_at);
+        const dateOptions = { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
+        const dateStr = dateObj.toLocaleString('en-US', dateOptions).replace(',', ''); 
+
+        html += `
+        <li id="task-${task.id}" class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-4 sm:space-y-0">
+                <div class="flex-1 space-y-2 pr-4">
+                    <div class="flex items-center space-x-2 w-full">
+                        <input type="text" id="title-${task.id}" value="${escapeHTML(task.title)}" class="font-medium text-gray-900 dark:text-white bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:ring-0 px-1 py-0.5 w-full ${titleStyle}" required>
+                        
+                        <select id="priority-${task.id}" onchange="updateTask(${task.id})" class="text-xs font-medium rounded-full px-2 py-1 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-none focus:ring-primary cursor-pointer ${prioClass}">
+                            <option value="High" ${task.priority === 'High' ? 'selected' : ''} class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">High</option>
+                            <option value="Medium" ${task.priority === 'Medium' ? 'selected' : ''} class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">Medium</option>
+                            <option value="Low" ${task.priority === 'Low' ? 'selected' : ''} class="bg-white text-gray-900 dark:bg-gray-800 dark:text-white">Low</option>
+                        </select>
+                    </div>
+                    <textarea id="description-${task.id}" rows="2" class="w-full text-sm text-gray-600 dark:text-gray-400 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:ring-0 px-1 ${descStyle}" placeholder="Description (optional)">${escapeHTML(task.description)}</textarea>
+                    <div class="mt-2 text-xs text-gray-500 dark:text-gray-500">
+                        Created: ${dateStr}
+                    </div>
+                </div>
+                <div class="flex-shrink-0 flex flex-col items-start sm:items-end space-y-3">
+                    <select id="status-${task.id}" onchange="updateTask(${task.id})" class="text-sm bg-gray-50 border border-gray-300 text-gray-900 rounded-md focus:ring-primary focus:border-primary block py-1 pl-2 pr-6 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white transition-colors cursor-pointer">
+                        <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                    </select>
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span id="save-indicator-${task.id}" class="text-green-500 opacity-0 transition-opacity duration-300 font-medium mr-2">Saved</span>
+                        <button type="button" onclick="updateTask(${task.id})" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 font-medium">Save</button>
+                        <span class="text-gray-300 dark:text-gray-600">|</span>
+                        <button type="button" onclick="deleteTask(${task.id})" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 font-medium">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </li>
+        `;
+    });
+    html += '</ul>';
+    container.innerHTML = html;
+    
+    updateStats();
+}
+
+function updateStats() {
+    const pendingEl = document.getElementById('stat-pending');
+    const progressEl = document.getElementById('stat-progress');
+    const completedEl = document.getElementById('stat-completed');
+    
+    if (!pendingEl || !progressEl || !completedEl) return;
+    
+    let pending = 0;
+    let progress = 0;
+    let completed = 0;
+    
+    globalTasks.forEach(t => {
+        if (t.status === 'Pending') pending++;
+        else if (t.status === 'In Progress') progress++;
+        else if (t.status === 'Completed') completed++;
+    });
+    
+    pendingEl.innerText = pending;
+    progressEl.innerText = progress;
+    completedEl.innerText = completed;
+    
+    // Highlight active filter card
+    const cards = {
+        'Pending': document.getElementById('card-pending'),
+        'In Progress': document.getElementById('card-progress'),
+        'Completed': document.getElementById('card-completed')
+    };
+    
+    // Reset visual state
+    Object.values(cards).forEach(c => {
+        if (c) {
+            c.classList.remove('ring-2', 'ring-primary', 'scale-[1.02]');
+            c.classList.add('opacity-75', 'hover:opacity-100');
+        }
+    });
+    
+    if (currentStatusFilter) {
+        const activeCard = cards[currentStatusFilter];
+        if (activeCard) {
+            activeCard.classList.remove('opacity-75', 'hover:opacity-100');
+            activeCard.classList.add('ring-2', 'ring-primary', 'scale-[1.02]');
+        }
+    } else {
+        // No filter active, restore all
+        Object.values(cards).forEach(c => {
+            if (c) c.classList.remove('opacity-75', 'hover:opacity-100');
+        });
+    }
+}
+
+function toggleStatusFilter(status) {
+    if (currentStatusFilter === status) {
+        currentStatusFilter = null;
+    } else {
+        currentStatusFilter = status;
+    }
+    renderTasks();
 }
 
 // Async Task Management
@@ -172,6 +287,16 @@ async function updateTask(id) {
         });
         
         if (response.ok) {
+            // Update local state and stats
+            const tIndex = globalTasks.findIndex(t => t.id == id);
+            if (tIndex > -1) {
+                globalTasks[tIndex].title = title;
+                globalTasks[tIndex].description = description;
+                globalTasks[tIndex].priority = priority;
+                globalTasks[tIndex].status = status;
+            }
+            updateStats();
+            
             indicator.classList.remove('opacity-0');
             setTimeout(() => {
                 indicator.classList.add('opacity-0');
@@ -215,10 +340,16 @@ async function deleteTask(id) {
         });
         
         if (response.ok) {
+            globalTasks = globalTasks.filter(t => t.id != id);
+            updateStats();
+            
             const el = document.getElementById(`task-${id}`);
             if (el) {
                 el.style.opacity = '0';
-                setTimeout(() => el.remove(), 300);
+                setTimeout(() => {
+                    el.remove();
+                    if (globalTasks.length === 0) renderTasks(); // Show empty state
+                }, 300);
             }
         } else {
             const data = await response.json();
@@ -229,5 +360,13 @@ async function deleteTask(id) {
     }
 }
 
-// Initial Load
-document.addEventListener('DOMContentLoaded', loadTasks);
+// Initial Load and Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    loadTasks();
+    
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    
+    if (searchInput) searchInput.addEventListener('input', renderTasks);
+    if (sortSelect) sortSelect.addEventListener('change', renderTasks);
+});

@@ -2,7 +2,6 @@
     <footer class="bg-white dark:bg-darkCard border-t border-gray-200 dark:border-gray-800 py-6 mt-auto">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
             <p class="text-sm text-gray-500 dark:text-gray-400">&copy; <?= date('Y') ?> SmartTasks AI. All rights reserved.</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500">Built with PHP, MySQL & Gemini API</p>
         </div>
     </footer>
     <script>
