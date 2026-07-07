@@ -41,11 +41,16 @@ if (empty($apiKey) || $apiKey === 'YOUR_API_KEY_HERE') {
 }
 
 // 1. Initialize the AI Service (Modular Architecture)
-// If you want to use ChatGPT in the future, you just instantiate ChatGPTService($apiKey) instead!
 $aiService = new GeminiService($apiKey);
 
 // 2. Extract Tasks
-$extractedTasks = $aiService->extractTasks($brain_dump);
+try {
+    $extractedTasks = $aiService->extractTasks($brain_dump);
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => $e->getMessage()]);
+    exit();
+}
 
 if (empty($extractedTasks)) {
     echo json_encode(['success' => true, 'message' => 'No tasks found in the text.', 'tasks_added' => 0]);

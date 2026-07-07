@@ -33,20 +33,32 @@ class GeminiService implements AIServiceInterface {
             ]
         ];
 
-        $options = [
-            'http' => [
-                'header'  => "Content-Type: application/json\r\n",
-                'method'  => 'POST',
-                'content' => json_encode($data),
-                'ignore_errors' => true // To catch HTTP errors
-            ]
-        ];
-
-        $context  = stream_context_create($options);
-        $result = file_get_contents($url, false, $context);
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json'
+        ]);
         
-        if ($result === FALSE) {
-            return []; // In production, throw an exception or log error
+        // In local XAMPP environments, SSL verification often fails because cacert.pem is not configured.
+        // For local development, we disable it so the API call actually goes through.
+        // In production, you should set this to true and configure PHP's curl.cainfo.
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $result = curl_exec($ch);
+        
+        if (curl_errno($ch)) {
+            $error_msg = curl_error($ch);
+            curl_close($ch);
+            throw new Exception("cURL Error: " . $error_msg);
+        }
+        
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode !== 200) {
+            throw new Exception("Gemini API Error (HTTP $httpCode): " . $result);
         }
 
         $response = json_decode($result, true);
@@ -54,7 +66,7 @@ class GeminiService implements AIServiceInterface {
         if (isset($response['candidates'][0]['content']['parts'][0]['text'])) {
             $raw_json = $response['candidates'][0]['content']['parts'][0]['text'];
             
-            // Clean up any potential Markdown wrapping just in case (though responseMimeType should prevent this)
+            // Clean up any potential Markdown wrapping
             $raw_json = preg_replace('/^```json\s*/i', '', $raw_json);
             $raw_json = preg_replace('/```\s*$/', '', $raw_json);
             
